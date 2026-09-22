@@ -8,7 +8,7 @@ class Settings(BaseModel):
     APP_NAME: str = "YouTube Downloader Pro"
     APP_VERSION: str = "1.0.0"
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = int(os.getenv("PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     
     # Storage settings
