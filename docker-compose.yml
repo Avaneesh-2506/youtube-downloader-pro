@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ytdl-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - MAX_CONCURRENT_DOWNLOADS=5
+      - YOUTUBE_COOKIES_PATH=/app/cookies.txt
+    volumes:
+      - ./backend/temp_downloads:/app/temp_downloads
+      - ./cookies.txt:/app/cookies.txt:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ytdl-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
