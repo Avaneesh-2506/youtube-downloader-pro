@@ -1,10 +1,22 @@
 import axios from 'axios';
 import { VideoInfo, DownloadProgress } from '../types';
 
+export const DEFAULT_PRODUCTION_BACKEND = 'https://youtube-downloader-pro-3amn.onrender.com';
+
 export const getBackendHost = (): string => {
   const saved = localStorage.getItem('ytdl_backend_url');
   if (saved) return saved.trim().replace(/\/$/, '');
-  return (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
+  
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
+  if (envUrl) return envUrl;
+
+  // If testing on localhost, use relative proxy to local backend
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return '';
+  }
+
+  // Default for GitHub Pages and all visitors
+  return DEFAULT_PRODUCTION_BACKEND;
 };
 
 export const setBackendHost = (url: string) => {
