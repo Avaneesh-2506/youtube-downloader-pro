@@ -36,7 +36,7 @@ class VideoInfoResponse(BaseModel):
 class DownloadStartRequest(BaseModel):
     url: str
     format_type: str = Field(default="video", pattern="^(video|audio)$")
-    quality: str = Field(default="1080", description="1080, 720, 480, 360, 240 or audio bitrate like 320k")
+    quality: str = Field(default="1080", description="2160, 1440, 1080, 720, 480, 360, 240, 144 or audio bitrate like 320k")
     ext: str = Field(default="mp4")
 
 class DownloadStartResponse(BaseModel):

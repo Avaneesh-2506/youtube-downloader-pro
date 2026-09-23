@@ -66,7 +66,6 @@ export const QualitySelector: React.FC<QualitySelectorProps> = ({ info, onDownlo
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {info.available_resolutions.map((res) => {
             const isSelected = selectedQuality === res.height.toString();
-            const is1080p = res.height === 1080;
             return (
               <button
                 key={res.height}
@@ -82,10 +81,27 @@ export const QualitySelector: React.FC<QualitySelectorProps> = ({ info, onDownlo
                     <span className="font-bold text-sm sm:text-base text-white">
                       {res.format_note}
                     </span>
-                    {is1080p && (
+                    {res.height === 2160 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        4K Ultra HD
+                      </span>
+                    )}
+                    {res.height === 1440 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        2K QHD
+                      </span>
+                    )}
+                    {res.height === 1080 && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                         <Sparkles className="w-2.5 h-2.5" />
-                        Crisp Full HD
+                        Full HD
+                      </span>
+                    )}
+                    {res.height === 144 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Data Saver
                       </span>
                     )}
                   </div>

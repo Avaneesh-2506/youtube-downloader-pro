@@ -21,6 +21,30 @@ def get_ffmpeg_path() -> Optional[str]:
     if _CACHED_FFMPEG_PATH:
         return _CACHED_FFMPEG_PATH
 
+    # 0. PyInstaller / Bundled executable checks
+    import sys
+    if hasattr(sys, "_MEIPASS"):
+        meipass_paths = [
+            Path(sys._MEIPASS) / "ffmpeg.exe",
+            Path(sys._MEIPASS) / "bin" / "ffmpeg.exe",
+        ]
+        for p in meipass_paths:
+            if p.is_file() and _verify_ffmpeg(str(p)):
+                logger.info(f"Using bundled PyInstaller FFmpeg binary at: {p}")
+                _CACHED_FFMPEG_PATH = str(p)
+                return str(p)
+
+    exe_dir = Path(sys.executable).parent
+    exe_bin_paths = [
+        exe_dir / "ffmpeg.exe",
+        exe_dir / "bin" / "ffmpeg.exe",
+    ]
+    for p in exe_bin_paths:
+        if p.is_file() and _verify_ffmpeg(str(p)):
+            logger.info(f"Using portable FFmpeg binary next to exe: {p}")
+            _CACHED_FFMPEG_PATH = str(p)
+            return str(p)
+
     # 1. System PATH check
     path = shutil.which("ffmpeg")
     if path and _verify_ffmpeg(path):

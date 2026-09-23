@@ -17,10 +17,11 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.pytest_cache/
+# PyInstaller & Binaries
+build/
+dist/
+*.spec
+bin/
 
 # Backend Temporary Downloads & Cookies
 backend/temp_downloads/

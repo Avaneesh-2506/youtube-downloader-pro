@@ -127,7 +127,7 @@ class YtDlpService:
             if h and f.get("vcodec") != "none":
                 available_heights.add(h)
 
-        target_heights = [1080, 720, 480, 360, 240]
+        target_heights = [2160, 1440, 1080, 720, 480, 360, 240, 144]
         resolutions: List[VideoResolution] = []
 
         # Find best audio bitrate to compute muxed size estimate
@@ -171,9 +171,24 @@ class YtDlpService:
                 elif duration and best_fmt.get("tbr"):
                     size_est = int(((best_fmt["tbr"] * 1000) / 8) * duration)
 
+            if target_h == 2160:
+                note = "2160p 4K UHD"
+            elif target_h == 1440:
+                note = "1440p 2K QHD"
+            elif target_h == 1080:
+                note = "1080p Full HD"
+            elif target_h == 720:
+                note = "720p HD"
+            elif target_h == 480:
+                note = "480p SD"
+            elif target_h == 144:
+                note = "144p Data Saver"
+            else:
+                note = f"{target_h}p"
+
             resolutions.append(VideoResolution(
                 height=target_h,
-                format_note=f"{target_h}p" + (" Full HD" if target_h == 1080 else " HD" if target_h == 720 else ""),
+                format_note=note,
                 fps=60 if any((f.get("fps") or 0) >= 50 for f in matching_formats) else 30,
                 ext="mp4",
                 filesize_est=size_est,

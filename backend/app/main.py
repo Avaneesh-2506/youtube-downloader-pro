@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,8 +68,29 @@ async def health_check():
         "ffmpeg_path": ffmpeg_bin
     }
 
-@app.get("/", tags=["system"])
-async def root():
-    return {
-        "message": f"Welcome to {settings.APP_NAME} API. Visit /docs for interactive Swagger documentation."
-    }
+# Mount frontend single-page application (SPA) if dist directory exists
+def _find_frontend_dist():
+    import sys
+    candidates = []
+    if hasattr(sys, "_MEIPASS"):
+        candidates.append(Path(sys._MEIPASS) / "frontend" / "dist")
+        candidates.append(Path(sys._MEIPASS) / "dist")
+    base_proj = Path(__file__).resolve().parent.parent.parent
+    candidates.append(base_proj / "frontend" / "dist")
+    candidates.append(Path.cwd() / "frontend" / "dist")
+    for c in candidates:
+        if c.is_dir() and (c / "index.html").is_file():
+            return c
+    return None
+
+frontend_dist = _find_frontend_dist()
+if frontend_dist:
+    from fastapi.staticfiles import StaticFiles
+    logger.info(f"Serving frontend SPA from: {frontend_dist}")
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+else:
+    @app.get("/", tags=["system"])
+    async def root():
+        return {
+            "message": f"Welcome to {settings.APP_NAME} API. Visit /docs for interactive Swagger documentation."
+        }

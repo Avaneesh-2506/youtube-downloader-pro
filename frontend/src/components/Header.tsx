@@ -15,7 +15,7 @@ export const Header: React.FC = () => {
                 YouTube Downloader Pro
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                1080p Muxer
+                4K & 1080p Muxer
               </span>
             </div>
           </div>
