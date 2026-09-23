@@ -30,6 +30,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("desktop_app")
 
+# Explicit imports to ensure PyInstaller bundles all required submodules
+# when backend core logic is obfuscated
+import fastapi
+import fastapi.middleware
+import fastapi.middleware.cors
+import fastapi.staticfiles
+import fastapi.responses
+import starlette
+import starlette.middleware
+import starlette.middleware.cors
+import starlette.staticfiles
+import starlette.responses
+import starlette.routing
+import sse_starlette
+import sse_starlette.sse
+import pydantic
+import imageio_ffmpeg
+import yt_dlp
+
 from app.main import app
 
 def is_port_available(port: int) -> bool:

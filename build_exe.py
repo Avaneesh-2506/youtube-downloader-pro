@@ -88,6 +88,16 @@ def main():
 
     hidden_flags = " ".join([f'--hidden-import "{h}"' for h in hidden_imports])
 
+    collect_packages = [
+        "fastapi",
+        "starlette",
+        "sse_starlette",
+        "uvicorn",
+        "pydantic",
+        "pydantic_core",
+    ]
+    collect_flags = " ".join([f'--collect-all "{p}"' for p in collect_packages])
+
     app_icon = BASE_DIR / "app_icon.ico"
     add_data = [
         f'--add-data "{BASE_DIR / "frontend" / "dist"};frontend/dist"',
@@ -110,6 +120,7 @@ def main():
         f'--paths "{pyarmor_runtime_dir}" '
         f'{data_flags} '
         f'{hidden_flags} '
+        f'{collect_flags} '
         f'"{BASE_DIR / "desktop_app.py"}"'
     )
 
