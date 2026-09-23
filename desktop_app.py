@@ -81,9 +81,34 @@ def wait_for_server(port: int, timeout: float = 15.0) -> bool:
             time.sleep(0.15)
     return False
 
+def get_icon_path() -> str | None:
+    # 1. PyInstaller bundled path
+    if hasattr(sys, "_MEIPASS"):
+        meipass_icon = Path(sys._MEIPASS) / "app_icon.ico"
+        if meipass_icon.is_file():
+            return str(meipass_icon)
+    # 2. Executable directory (for portable usage)
+    exe_icon = Path(sys.executable).parent / "app_icon.ico"
+    if exe_icon.is_file():
+        return str(exe_icon)
+    # 3. Source directory
+    src_icon = BASE_DIR / "app_icon.ico"
+    if src_icon.is_file():
+        return str(src_icon)
+    return None
+
 def main():
     import uvicorn
     import webview
+
+    # Set explicit Windows AppUserModelID so Windows taskbar groups and displays custom icon
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            app_id = "avaneesh.youtubedownloaderpro.desktop.1.0"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+        except Exception as e:
+            logger.warning(f"Could not set AppUserModelID: {e}")
 
     port = get_best_port()
     logger.info(f"Starting embedded backend on 127.0.0.1:{port}")
@@ -117,8 +142,12 @@ def main():
         text_select=True
     )
 
-    # Starts desktop message loop (blocks until user closes window)
-    webview.start()
+    icon_path = get_icon_path()
+    if icon_path:
+        logger.info(f"Setting desktop window & taskbar icon to: {icon_path}")
+        webview.start(icon=icon_path)
+    else:
+        webview.start()
 
     logger.info("Window closed. Terminating application...")
     server.should_exit = True
