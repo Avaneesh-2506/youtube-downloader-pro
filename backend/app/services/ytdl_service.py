@@ -73,16 +73,10 @@ class YtDlpService:
             "socket_timeout": 30,
             "retries": 10,
             "fragment_retries": 10,
-            "ignore_no_formats_error": True,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["default", "web"]
-                }
-            }
         }
         
         # Enable JavaScript runtime if node is present
-        node_bin = shutil.which("node")
+        node_bin = shutil.which("node") or shutil.which("nodejs")
         if node_bin:
             opts["js_runtimes"] = {"node": {}}
 
@@ -104,53 +98,46 @@ class YtDlpService:
         opts.update({
             "extract_flat": False,
             "skip_download": True,
-            "ignore_no_formats_error": True,
         })
 
         info = None
-        last_err = None
-        client_candidates = [
-            ["default", "web"],
-            ["web"],
-            ["visionos", "web"],
-            ["mweb", "web"],
-        ]
-
-        for client_try in client_candidates:
-            try:
-                attempt_opts = dict(opts)
-                attempt_opts["extractor_args"] = {"youtube": {"player_client": client_try}}
-                with yt_dlp.YoutubeDL(attempt_opts) as ydl:
-                    res = ydl.extract_info(url, download=False)
-                if res and res.get("formats"):
-                    info = res
-                    break
-            except Exception as e:
-                logger.warning(f"Fetch failed with client {client_try}: {e}")
-                last_err = e
-
-        if not info and last_err:
-            err_msg = str(last_err)
-            has_cookies = os.path.exists(settings.COOKIE_PATH) and os.path.getsize(settings.COOKIE_PATH) > 0
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+        except yt_dlp.utils.DownloadError as e:
+            err_msg = str(e)
             
-            if "Sign in to confirm your age" in err_msg:
-                raise PermissionError("This video is age-restricted and requires cookie authentication.")
-            if "Sign in to confirm you're not a bot" in err_msg or "Sign in to confirm you’re not a bot" in err_msg:
-                if has_cookies:
-                    raise PermissionError(
-                        "YouTube challenged the session cookies ('Sign in to confirm you\\'re not a bot'). "
-                        "Please export fresh cookies from an active, logged-in YouTube browser tab."
-                    )
-                else:
-                    raise PermissionError(
-                        "YouTube bot check triggered on cloud datacenter. "
-                        "Please add cookies.txt to your Render service to authenticate requests."
-                    )
-            if "Private video" in err_msg:
-                raise PermissionError("This video is private. You do not have permission to view or download it.")
-            if "Video unavailable" in err_msg or "video is unavailable" in err_msg.lower():
-                raise FileNotFoundError("This video is unavailable on YouTube. Please check the URL to make sure the video ID is spelled correctly (case-sensitive).")
-            raise RuntimeError(f"Failed to fetch video: {err_msg}")
+            # If default client hits a temporary reload/format error, try fallback with visionos
+            if "The page needs to be reloaded" in err_msg or "Requested format is not available" in err_msg:
+                try:
+                    fallback_opts = dict(opts)
+                    fallback_opts["extractor_args"] = {"youtube": {"player_client": ["visionos", "web"]}}
+                    with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                except Exception:
+                    pass
+
+            if not info:
+                has_cookies = os.path.exists(settings.COOKIE_PATH) and os.path.getsize(settings.COOKIE_PATH) > 0
+                
+                if "Sign in to confirm your age" in err_msg:
+                    raise PermissionError("This video is age-restricted and requires cookie authentication.")
+                if "Sign in to confirm you're not a bot" in err_msg or "Sign in to confirm you’re not a bot" in err_msg:
+                    if has_cookies:
+                        raise PermissionError(
+                            "YouTube challenged the session cookies ('Sign in to confirm you\\'re not a bot'). "
+                            "Please export fresh cookies from an active, logged-in YouTube browser tab."
+                        )
+                    else:
+                        raise PermissionError(
+                            "YouTube bot check triggered on cloud datacenter. "
+                            "Please add cookies.txt to your Render service to authenticate requests."
+                        )
+                if "Private video" in err_msg:
+                    raise PermissionError("This video is private. You do not have permission to view or download it.")
+                if "Video unavailable" in err_msg or "video is unavailable" in err_msg.lower():
+                    raise FileNotFoundError("This video is unavailable on YouTube. Please check the URL to make sure the video ID is spelled correctly (case-sensitive).")
+                raise RuntimeError(f"Failed to fetch video: {err_msg}")
 
         if not info:
             raise RuntimeError("Could not retrieve video information.")
