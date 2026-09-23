@@ -33,5 +33,20 @@ class Settings(BaseModel):
 
 settings = Settings()
 
+# Support Render Secret Files mount path (/etc/secrets/cookies.txt)
+render_secret_cookies = Path("/etc/secrets/cookies.txt")
+if render_secret_cookies.is_file():
+    settings.COOKIE_PATH = str(render_secret_cookies)
+
+# Support raw cookies text pasted as an environment variable (YOUTUBE_COOKIES_CONTENT)
+cookies_content = os.getenv("YOUTUBE_COOKIES_CONTENT", "").strip()
+if cookies_content:
+    cookie_file = BASE_DIR / "cookies.txt"
+    try:
+        cookie_file.write_text(cookies_content, encoding="utf-8")
+        settings.COOKIE_PATH = str(cookie_file)
+    except Exception as e:
+        pass
+
 # Ensure download directory exists
 settings.DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)

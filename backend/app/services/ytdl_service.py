@@ -73,6 +73,11 @@ class YtDlpService:
             "socket_timeout": 30,
             "retries": 10,
             "fragment_retries": 10,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "ios", "mweb", "web"],
+                }
+            },
         }
         
         # Enable JavaScript runtime if node is present
@@ -107,6 +112,8 @@ class YtDlpService:
             err_msg = str(e)
             if "Sign in to confirm your age" in err_msg:
                 raise PermissionError("This video is age-restricted and requires cookie authentication.")
+            if "Sign in to confirm you're not a bot" in err_msg or "Sign in to confirm you’re not a bot" in err_msg:
+                raise PermissionError("YouTube bot check triggered on cloud datacenter. Please add cookies.txt or YOUTUBE_COOKIES_CONTENT to your Render service.")
             if "Private video" in err_msg or "Video unavailable" in err_msg:
                 raise FileNotFoundError("This video is private or unavailable.")
             raise RuntimeError(f"Failed to fetch video: {err_msg}")
