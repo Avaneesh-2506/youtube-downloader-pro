@@ -1,45 +1,16 @@
 import axios from 'axios';
 import { VideoInfo, DownloadProgress } from '../types';
 
-export const DEFAULT_PRODUCTION_BACKEND = 'https://youtube-downloader-pro-3amn.onrender.com';
-
-export const getBackendHost = (): string => {
-  const saved = localStorage.getItem('ytdl_backend_url');
-  if (saved) return saved.trim().replace(/\/$/, '');
-  
-  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '');
-  if (envUrl) return envUrl;
-
-  // If testing on localhost, use relative proxy to local backend
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return '';
-  }
-
-  // Default for GitHub Pages and all visitors
-  return DEFAULT_PRODUCTION_BACKEND;
-};
-
-export const setBackendHost = (url: string) => {
-  if (url.trim()) {
-    localStorage.setItem('ytdl_backend_url', url.trim().replace(/\/$/, ''));
-  } else {
-    localStorage.removeItem('ytdl_backend_url');
-  }
-};
-
-export const getApiBase = (): string => {
-  const host = getBackendHost();
-  return host ? `${host}/api/v1` : '/api/v1';
-};
+const API_BASE = '/api/v1';
 
 export const api = {
   async fetchVideoInfo(url: string): Promise<VideoInfo> {
-    const response = await axios.post<VideoInfo>(`${getApiBase()}/info`, { url });
+    const response = await axios.post<VideoInfo>(`${API_BASE}/info`, { url });
     return response.data;
   },
 
   async startDownload(url: string, format_type: 'video' | 'audio', quality: string): Promise<{ task_id: string }> {
-    const response = await axios.post<{ task_id: string }>(`${getApiBase()}/download/start`, {
+    const response = await axios.post<{ task_id: string }>(`${API_BASE}/download/start`, {
       url,
       format_type,
       quality,
@@ -53,7 +24,7 @@ export const api = {
     onProgress: (data: DownloadProgress) => void,
     onError: (error: string) => void
   ): () => void {
-    const eventSource = new EventSource(`${getApiBase()}/download/progress/${taskId}`);
+    const eventSource = new EventSource(`${API_BASE}/download/progress/${taskId}`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -97,6 +68,6 @@ export const api = {
   },
 
   getFileUrl(taskId: string): string {
-    return `${getApiBase()}/download/file/${taskId}`;
+    return `${API_BASE}/download/file/${taskId}`;
   }
 };

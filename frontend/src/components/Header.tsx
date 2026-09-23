@@ -21,17 +21,12 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <div className="flex items-center gap-2 bg-slate-900/70 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-medium text-emerald-400">Cloud Online</span>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-1.5 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg">
+        <div className="hidden sm:flex items-center gap-4 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg">
             <Zap className="w-3.5 h-3.5 text-amber-400" />
             <span>Lossless Muxing</span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <div className="flex items-center gap-1.5 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-lg">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span>Zero Data Stored</span>
           </div>
