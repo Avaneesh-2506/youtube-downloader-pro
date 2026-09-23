@@ -88,19 +88,24 @@ def main():
 
     hidden_flags = " ".join([f'--hidden-import "{h}"' for h in hidden_imports])
 
+    app_icon = BASE_DIR / "app_icon.ico"
     add_data = [
         f'--add-data "{BASE_DIR / "frontend" / "dist"};frontend/dist"',
         f'--add-data "{obf_dir / "app"};app"',
         f'--add-data "{pyarmor_runtime_dir};pyarmor_runtime_000000"',
         f'--add-data "{bin_ffmpeg};bin"',
         f'--add-data "{bin_ffmpeg};."',
+        f'--add-data "{app_icon};."',
     ]
     data_flags = " ".join(add_data)
+
+    icon_flag = f'--icon "{app_icon}"' if app_icon.is_file() else ""
 
     pyinstaller_cmd = (
         f'pyinstaller --noconfirm --onefile '
         f'--name "YouTubeDownloaderPro" '
         f'--windowed '
+        f'{icon_flag} '
         f'--paths "{obf_dir}" '
         f'--paths "{pyarmor_runtime_dir}" '
         f'{data_flags} '
