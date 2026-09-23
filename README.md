@@ -4,6 +4,7 @@
 
 [![Download Windows Executable](https://img.shields.io/badge/Download-YouTubeDownloaderPro.exe-e11d48?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Avaneesh-2506/youtube-downloader-pro/releases/download/v1.0.0/YouTubeDownloaderPro.exe)
 [![Releases](https://img.shields.io/badge/GitHub-Releases-blue?style=for-the-badge&logo=github)](https://github.com/Avaneesh-2506/youtube-downloader-pro/releases/latest)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-green.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 
 A high-performance, standalone Windows desktop and full-stack application designed to download YouTube videos in resolutions from **144p up to 4K Ultra HD (with audio)**, and extract high-bitrate **MP3 audio (up to 320 kbps)**.
 
@@ -92,3 +93,26 @@ If you need to download age-restricted or members-only videos:
 1. Export your YouTube cookies using the browser extension **"Get cookies.txt LOCALLY"** (Netscape format).
 2. Place the file as `cookies.txt` inside the `backend/` directory (or root directory for Docker).
 3. The backend will automatically detect and load `cookies.txt`.
+
+---
+
+## ⚖️ Legal Disclaimer & Fair Use Notice
+
+This software is strictly developed for **personal, archival, and educational purposes** (e.g., preserving personal videos, content released under Creative Commons, or public domain material).
+
+- The developers do not host, store, or distribute any copyrighted media or stream data.
+- All downloads and conversions are processed directly and ephemeral on the client machine using open-source utilities.
+- It is the end-user's responsibility to adhere to applicable copyright legislation, regional laws, and YouTube's Terms of Service.
+- The author accepts no liability for any copyright infringement or misuse arising from the operation of this utility.
+
+---
+
+## 📜 License
+
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.  
+Copyright © 2026 **Avaneesh Shukla**. All rights reserved.
+
+Under the GPLv3 license:
+- You are free to run, copy, and modify this project.
+- **Anti-Theft Protection**: You may NOT take this code, modify it, and distribute it as a proprietary/closed-source or paid commercial product. Any derivative work must remain free and open under GPLv3, with prominent attribution to the original author.
+

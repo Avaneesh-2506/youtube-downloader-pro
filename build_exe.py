@@ -44,8 +44,16 @@ def main():
         if d.is_dir():
             shutil.rmtree(d, ignore_errors=True)
 
-    # 4. Invoke PyInstaller
-    print("\n[Step 3/4] Running PyInstaller standalone compiler...")
+    # 4. Obfuscate backend logic with PyArmor
+    print("\n[Step 3/5] Obfuscating backend core logic with PyArmor...")
+    obf_dir = BASE_DIR / "build" / "obfuscated"
+    obf_dir.mkdir(parents=True, exist_ok=True)
+    run(f'pyarmor gen -O "{obf_dir}" -r "{BASE_DIR / "backend" / "app"}"')
+    
+    pyarmor_runtime_dir = obf_dir / "pyarmor_runtime_000000"
+
+    # 5. Invoke PyInstaller
+    print("\n[Step 4/5] Running PyInstaller standalone compiler...")
     
     hidden_imports = [
         "uvicorn",
@@ -75,13 +83,15 @@ def main():
         "pydantic",
         "anyio",
         "anyio._backends._asyncio",
+        "pyarmor_runtime_000000",
     ]
 
     hidden_flags = " ".join([f'--hidden-import "{h}"' for h in hidden_imports])
 
     add_data = [
         f'--add-data "{BASE_DIR / "frontend" / "dist"};frontend/dist"',
-        f'--add-data "{BASE_DIR / "backend" / "app"};app"',
+        f'--add-data "{obf_dir / "app"};app"',
+        f'--add-data "{pyarmor_runtime_dir};pyarmor_runtime_000000"',
         f'--add-data "{bin_ffmpeg};bin"',
         f'--add-data "{bin_ffmpeg};."',
     ]
@@ -91,7 +101,8 @@ def main():
         f'pyinstaller --noconfirm --onefile '
         f'--name "YouTubeDownloaderPro" '
         f'--windowed '
-        f'--paths "{BASE_DIR / "backend"}" '
+        f'--paths "{obf_dir}" '
+        f'--paths "{pyarmor_runtime_dir}" '
         f'{data_flags} '
         f'{hidden_flags} '
         f'"{BASE_DIR / "desktop_app.py"}"'
@@ -99,7 +110,7 @@ def main():
 
     run(pyinstaller_cmd)
 
-    print("\n[Step 4/4] Verifying built output...")
+    print("\n[Step 5/5] Verifying built output...")
     # Also test creating a single file or onedir
     exe_path = BASE_DIR / "dist" / "YouTubeDownloaderPro.exe"
     if not exe_path.is_file():
