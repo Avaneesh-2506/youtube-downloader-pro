@@ -73,11 +73,6 @@ class YtDlpService:
             "socket_timeout": 30,
             "retries": 10,
             "fragment_retries": 10,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "ios", "mweb", "web"],
-                }
-            },
         }
         
         # Enable JavaScript runtime if node is present
