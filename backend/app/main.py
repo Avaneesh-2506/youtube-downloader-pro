@@ -59,17 +59,38 @@ app.include_router(api_v1_router, prefix="/api")
 @app.get("/health", tags=["system"])
 async def health_check():
     import os
+    import yt_dlp
+    
     ffmpeg_bin = get_ffmpeg_path()
     has_cookie = os.path.exists(settings.COOKIE_PATH)
     cookie_size = os.path.getsize(settings.COOKIE_PATH) if has_cookie else 0
+    
+    parsed_count = 0
+    cookie_names = []
+    has_auth_cookies = False
+    
+    if has_cookie and cookie_size > 0:
+        try:
+            jar = yt_dlp.cookies.YoutubeDLCookieJar(settings.COOKIE_PATH)
+            jar.load(ignore_discard=True, ignore_expires=True)
+            cookie_names = [c.name for c in jar]
+            parsed_count = len(cookie_names)
+            auth_indicators = {"LOGIN_INFO", "SAPISID", "__Secure-3PSID", "__Secure-1PSID", "SID", "SSID"}
+            has_auth_cookies = bool(auth_indicators.intersection(set(cookie_names)))
+        except Exception as e:
+            logger.error(f"Error parsing cookiejar in health check: {e}")
+
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "ffmpeg_ready": bool(ffmpeg_bin),
         "ffmpeg_path": ffmpeg_bin,
-        "cookies_loaded": has_cookie,
+        "cookies_loaded": has_cookie and parsed_count > 0,
         "cookie_file_size": cookie_size,
+        "cookies_parsed_count": parsed_count,
+        "has_auth_cookies": has_auth_cookies,
+        "sample_cookie_names": cookie_names[:10],
     }
 
 @app.get("/", tags=["system"])

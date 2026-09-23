@@ -35,43 +35,97 @@ settings = Settings()
 
 import base64
 import logging
+import re
+import time
 
 logger = logging.getLogger(__name__)
 
-# Support Render Secret Files mount path (/etc/secrets/cookies.txt)
-render_secret_cookies = Path("/etc/secrets/cookies.txt")
-if render_secret_cookies.is_file():
-    settings.COOKIE_PATH = str(render_secret_cookies)
-    logger.info(f"Loaded cookies from Render Secret Files: {render_secret_cookies}")
+def normalize_and_repair_cookies(raw: str) -> str:
+    """Repairs and normalizes cookie text to strict Netscape tab-delimited format."""
+    if not raw or not raw.strip():
+        return ""
+        
+    # Unescape escaped newlines and tabs if passed from shell / web input
+    if "\\n" in raw:
+        raw = raw.replace("\\n", "\n")
+    if "\\t" in raw:
+        raw = raw.replace("\\t", "\t")
 
-# Support base64-encoded cookies (YOUTUBE_COOKIES_BASE64)
+    lines = []
+    has_header = False
+    now = int(time.time())
+
+    for line in raw.splitlines():
+        trimmed = line.strip()
+        if not trimmed:
+            continue
+        if trimmed.startswith("# Netscape") or trimmed.startswith("# HTTP Cookie File"):
+            has_header = True
+            lines.append(trimmed)
+            continue
+        if trimmed.startswith("#"):
+            lines.append(trimmed)
+            continue
+
+        # Try tab split first
+        parts = trimmed.split("\t")
+        if len(parts) < 7:
+            # Try whitespace split if tabs were converted to spaces
+            parts = re.split(r"\s+", trimmed, maxsplit=6)
+
+        if len(parts) == 7:
+            domain, flag, path, secure, expires_str, name, val = parts
+            # Auto-bump expired timestamps to year 2038 so client-side cookiejar doesn't discard them
+            try:
+                exp = int(expires_str)
+                if 0 < exp < now:
+                    expires_str = "2147483647"
+            except ValueError:
+                pass
+            lines.append("\t".join([domain, flag, path, secure, expires_str, name, val]))
+        else:
+            lines.append(trimmed)
+
+    header = "# Netscape HTTP Cookie File\n# Auto-normalized for yt-dlp\n" if not has_header else ""
+    return header + "\n".join(lines) + "\n"
+
+# Process cookies from multiple potential sources
+cookie_raw_text = ""
+render_secret_cookies = Path("/etc/secrets/cookies.txt")
 cookies_b64 = os.getenv("YOUTUBE_COOKIES_BASE64", "").strip()
-if cookies_b64:
+cookies_content = os.getenv("YOUTUBE_COOKIES_CONTENT", "").strip()
+local_cookie_file = BASE_DIR / "cookies.txt"
+
+if render_secret_cookies.is_file():
     try:
-        decoded = base64.b64decode(cookies_b64).decode("utf-8")
-        cookie_file = BASE_DIR / "cookies.txt"
-        cookie_file.write_text(decoded, encoding="utf-8")
-        settings.COOKIE_PATH = str(cookie_file)
-        logger.info("Successfully decoded and saved YOUTUBE_COOKIES_BASE64")
+        cookie_raw_text = render_secret_cookies.read_text(encoding="utf-8")
+        logger.info(f"Read cookies from Render Secret Files: {render_secret_cookies}")
+    except Exception as e:
+        logger.error(f"Failed to read Render Secret Files cookies: {e}")
+elif cookies_b64:
+    try:
+        cookie_raw_text = base64.b64decode(cookies_b64).decode("utf-8")
+        logger.info("Successfully decoded YOUTUBE_COOKIES_BASE64")
     except Exception as e:
         logger.error(f"Failed to decode YOUTUBE_COOKIES_BASE64: {e}")
-
-# Support raw cookies text pasted as an environment variable (YOUTUBE_COOKIES_CONTENT)
-cookies_content = os.getenv("YOUTUBE_COOKIES_CONTENT", "").strip()
-if cookies_content and not cookies_b64:
-    # Unescape literal \n and \t if the web form / shell escaped them
-    if "\\n" in cookies_content and "\n" not in cookies_content:
-        cookies_content = cookies_content.replace("\\n", "\n")
-    if "\\t" in cookies_content and "\t" not in cookies_content:
-        cookies_content = cookies_content.replace("\\t", "\t")
-
-    cookie_file = BASE_DIR / "cookies.txt"
+elif cookies_content:
+    cookie_raw_text = cookies_content
+    logger.info("Read cookies from YOUTUBE_COOKIES_CONTENT")
+elif local_cookie_file.is_file():
     try:
-        cookie_file.write_text(cookies_content, encoding="utf-8")
-        settings.COOKIE_PATH = str(cookie_file)
-        logger.info(f"Successfully wrote cookies to {cookie_file} ({len(cookies_content)} bytes)")
+        cookie_raw_text = local_cookie_file.read_text(encoding="utf-8")
     except Exception as e:
-        logger.error(f"Failed to write YOUTUBE_COOKIES_CONTENT: {e}")
+        logger.error(f"Failed to read local cookies.txt: {e}")
+
+if cookie_raw_text:
+    try:
+        normalized = normalize_and_repair_cookies(cookie_raw_text)
+        local_cookie_file.write_text(normalized, encoding="utf-8")
+        settings.COOKIE_PATH = str(local_cookie_file)
+        logger.info(f"Saved normalized cookies to {local_cookie_file} ({len(normalized)} bytes)")
+    except Exception as e:
+        logger.error(f"Failed to write normalized cookies: {e}")
 
 # Ensure download directory exists
 settings.DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
