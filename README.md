@@ -1,15 +1,32 @@
-# YouTube Downloader Pro (240p to 1080p Full HD & MP3)
+# YouTube Downloader Pro (144p to 4K Ultra HD & MP3)
 
-A high-performance, production-ready full-stack web application designed to download YouTube videos in resolutions from **240p up to 1080p Full HD (with audio)**, and extract high-bitrate **MP3 audio (up to 320 kbps)**.
+<div align="center">
 
-Features real-time download progress tracking via Server-Sent Events (SSE), automatic DASH stream muxing with FFmpeg, and an ephemeral transient storage manager that auto-purges files after download.
+[![Download Windows Executable](https://img.shields.io/badge/Download-YouTubeDownloaderPro.exe-e11d48?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Avaneesh-2506/youtube-downloader-pro/releases/download/v1.0.0/YouTubeDownloaderPro.exe)
+[![Releases](https://img.shields.io/badge/GitHub-Releases-blue?style=for-the-badge&logo=github)](https://github.com/Avaneesh-2506/youtube-downloader-pro/releases/latest)
+
+A high-performance, standalone Windows desktop and full-stack application designed to download YouTube videos in resolutions from **144p up to 4K Ultra HD (with audio)**, and extract high-bitrate **MP3 audio (up to 320 kbps)**.
+
+</div>
+
+---
+
+## 💾 Direct Download (Windows Desktop App)
+
+No installation required! Just download the standalone `.exe` and double-click to run:
+
+👉 **[Download Latest `YouTubeDownloaderPro.exe`](https://github.com/Avaneesh-2506/youtube-downloader-pro/releases/download/v1.0.0/YouTubeDownloaderPro.exe)** *(from GitHub Releases)*
+
+* **Zero Dependencies**: Bundles Python 3.12, React dark UI, and embedded FFmpeg.
+* **No Bot Walls**: Runs locally on your home internet without datacenter CAPTCHAs or login walls.
+* **Instant Lossless Muxing**: Fast local DASH stream merging for 1080p, 2K, and 4K videos.
 
 ---
 
 ## 🌟 Key Features
 
-- **Full HD 1080p Muxing**: Automatically downloads separate DASH video and audio streams and merges them using lossless stream copying (`-c:v copy -c:a aac`) in seconds.
-- **Resolutions Supported**: 1080p (Full HD), 720p (HD), 480p, 360p, 240p.
+- **4K UHD & 1080p Lossless Muxing**: Automatically downloads separate DASH video and audio streams and merges them using FFmpeg in seconds.
+- **Resolutions Supported**: 2160p (4K UHD), 1440p (2K QHD), 1080p (Full HD), 720p (HD), 480p, 360p, 240p, 144p (Data Saver).
 - **Audio Extraction**: 320 kbps, 256 kbps, and 128 kbps stereo MP3.
 - **Real-Time Live Progress**: Tracks speed (MB/s), ETA, and stage status (`analyzing` -> `downloading video` -> `downloading audio` -> `muxing` -> `completed`) via Server-Sent Events (SSE).
 - **Ephemeral Storage**: Files are streamed to the client and immediately scheduled for automatic disk cleanup. Abandoned files older than 30 minutes are purged by an automatic background janitor.
