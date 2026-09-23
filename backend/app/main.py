@@ -58,13 +58,18 @@ app.include_router(api_v1_router, prefix="/api")
 
 @app.get("/health", tags=["system"])
 async def health_check():
+    import os
     ffmpeg_bin = get_ffmpeg_path()
+    has_cookie = os.path.exists(settings.COOKIE_PATH)
+    cookie_size = os.path.getsize(settings.COOKIE_PATH) if has_cookie else 0
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "ffmpeg_ready": bool(ffmpeg_bin),
-        "ffmpeg_path": ffmpeg_bin
+        "ffmpeg_path": ffmpeg_bin,
+        "cookies_loaded": has_cookie,
+        "cookie_file_size": cookie_size,
     }
 
 @app.get("/", tags=["system"])
