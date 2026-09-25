@@ -3,6 +3,7 @@ import uuid
 import json
 import logging
 import re
+import shutil
 from urllib.parse import quote
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, BackgroundTasks, status
@@ -14,10 +15,20 @@ from app.schemas.download import (
     VideoInfoResponse,
     DownloadStartRequest,
     DownloadStartResponse,
+    SaveToDownloadsRequest,
+    SaveToDownloadsResponse,
+    PathActionRequest,
+    PathActionResponse,
 )
 from app.services.ytdl_service import YtDlpService, is_valid_youtube_url
 from app.services.download_manager import download_manager
 from app.services.cleanup_service import cleanup_task_directory
+from app.services.file_service import (
+    get_user_downloads_dir,
+    get_unique_filename,
+    open_in_file_explorer,
+    open_file_native,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -133,3 +144,58 @@ async def download_file(task_id: str, background_tasks: BackgroundTasks):
             "Access-Control-Expose-Headers": "Content-Disposition",
         }
     )
+
+@router.post("/download/save-to-downloads", response_model=SaveToDownloadsResponse)
+async def save_to_downloads(payload: SaveToDownloadsRequest):
+    task = download_manager.get_task(payload.task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Download task not found")
+
+    if not task.completed or not task.result_filepath or not task.result_filepath.exists():
+        if task.stage == "failed":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=task.error or "Download failed")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is still processing or unavailable")
+
+    try:
+        downloads_dir = get_user_downloads_dir()
+        filename = task.filename or task.result_filepath.name
+        dest_path = get_unique_filename(downloads_dir, filename)
+
+        # Copy the processed file to user's downloads folder
+        shutil.copy2(task.result_filepath, dest_path)
+        logger.info(f"File successfully saved to downloads: {dest_path}")
+
+        return SaveToDownloadsResponse(
+            success=True,
+            path=str(dest_path),
+            filename=dest_path.name
+        )
+    except Exception as e:
+        logger.error(f"Failed to save file to downloads: {e}", exc_info=True)
+        return SaveToDownloadsResponse(
+            success=False,
+            error=str(e)
+        )
+
+@router.post("/download/open-folder", response_model=PathActionResponse)
+async def open_folder(payload: PathActionRequest):
+    path = payload.path.strip()
+    if not path:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Path cannot be empty")
+
+    ok = open_in_file_explorer(path)
+    if not ok:
+        return PathActionResponse(success=False, error="Could not locate or open file path in explorer")
+    return PathActionResponse(success=True)
+
+@router.post("/download/open-file", response_model=PathActionResponse)
+async def open_file(payload: PathActionRequest):
+    path = payload.path.strip()
+    if not path:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Path cannot be empty")
+
+    ok = open_file_native(path)
+    if not ok:
+        return PathActionResponse(success=False, error="Could not open file in system player")
+    return PathActionResponse(success=True)
+

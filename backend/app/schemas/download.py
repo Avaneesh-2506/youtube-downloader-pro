@@ -55,3 +55,20 @@ class ProgressUpdate(BaseModel):
     message: Optional[str] = None
     file_url: Optional[str] = None
     error: Optional[str] = None
+
+class SaveToDownloadsRequest(BaseModel):
+    task_id: str
+
+class SaveToDownloadsResponse(BaseModel):
+    success: bool
+    path: Optional[str] = None
+    filename: Optional[str] = None
+    error: Optional[str] = None
+
+class PathActionRequest(BaseModel):
+    path: str
+
+class PathActionResponse(BaseModel):
+    success: bool
+    error: Optional[str] = None
+

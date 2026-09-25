@@ -40,6 +40,9 @@ def main():
     print(f"FFmpeg binary staged: {bin_ffmpeg} ({round(bin_ffmpeg.stat().st_size / (1024*1024), 1)} MB)")
 
     # 3. Clean prior build artifacts
+    if sys.platform == "win32":
+        subprocess.run("taskkill /F /IM YouTubeDownloaderPro.exe 2>nul", shell=True)
+
     for d in [BASE_DIR / "build", BASE_DIR / "dist"]:
         if d.is_dir():
             shutil.rmtree(d, ignore_errors=True)
