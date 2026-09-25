@@ -97,95 +97,6 @@ def get_icon_path() -> str | None:
         return str(src_icon)
     return None
 
-class DesktopApi:
-    def __init__(self):
-        self.window = None
-
-    def set_window(self, win):
-        self.window = win
-
-    def is_desktop(self) -> bool:
-        return True
-
-    def save_file_as(self, task_id: str) -> dict:
-        """Opens native Windows Save File Dialog and saves the task's completed file."""
-        import shutil
-        import webview
-        from app.services.download_manager import download_manager
-        from app.services.file_service import get_user_downloads_dir
-
-        task = download_manager.get_task(task_id)
-        if not task or not task.result_filepath or not task.result_filepath.exists():
-            return {"success": False, "error": "File not found or still processing"}
-
-        if not self.window:
-            return {"success": False, "error": "Window not initialized"}
-
-        default_name = task.filename or task.result_filepath.name
-        ext = task.result_filepath.suffix.lstrip(".").lower()
-        file_types = [f"{ext.upper()} Files (*.{ext})", "All Files (*.*)"] if ext else ["All Files (*.*)"]
-        initial_dir = str(get_user_downloads_dir())
-
-        result = self.window.create_file_dialog(
-            dialog_type=webview.FileDialog.SAVE,
-            directory=initial_dir,
-            save_filename=default_name,
-            file_types=file_types
-        )
-
-        if not result or len(result) == 0:
-            return {"success": False, "cancelled": True}
-
-        dest_path = Path(result[0])
-        try:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(task.result_filepath, dest_path)
-            logger.info(f"File successfully saved via Save As to: {dest_path}")
-            return {
-                "success": True,
-                "path": str(dest_path),
-                "filename": dest_path.name
-            }
-        except Exception as e:
-            logger.exception(f"Failed to copy file to {dest_path}: {e}")
-            return {"success": False, "error": str(e)}
-
-    def save_to_downloads(self, task_id: str) -> dict:
-        """Saves the completed file directly into the user's Downloads folder."""
-        import shutil
-        from app.services.download_manager import download_manager
-        from app.services.file_service import get_user_downloads_dir, get_unique_filename
-
-        task = download_manager.get_task(task_id)
-        if not task or not task.result_filepath or not task.result_filepath.exists():
-            return {"success": False, "error": "File not found or still processing"}
-
-        downloads_dir = get_user_downloads_dir()
-        dest_name = task.filename or task.result_filepath.name
-        dest_path = get_unique_filename(downloads_dir, dest_name)
-
-        try:
-            shutil.copy2(task.result_filepath, dest_path)
-            logger.info(f"File successfully saved to downloads: {dest_path}")
-            return {
-                "success": True,
-                "path": str(dest_path),
-                "filename": dest_path.name
-            }
-        except Exception as e:
-            logger.exception(f"Failed to save to downloads: {e}")
-            return {"success": False, "error": str(e)}
-
-    def open_folder(self, file_path: str) -> dict:
-        from app.services.file_service import open_in_file_explorer
-        ok = open_in_file_explorer(file_path)
-        return {"success": ok}
-
-    def open_file(self, file_path: str) -> dict:
-        from app.services.file_service import open_file_native
-        ok = open_file_native(file_path)
-        return {"success": ok}
-
 def main():
     import uvicorn
     import webview
@@ -221,8 +132,6 @@ def main():
     app_url = f"http://127.0.0.1:{port}"
     logger.info(f"Launching desktop window pointing to {app_url}")
 
-    api = DesktopApi()
-
     window = webview.create_window(
         title="YouTube Downloader Pro",
         url=app_url,
@@ -230,10 +139,8 @@ def main():
         height=820,
         min_size=(960, 640),
         background_color="#020617",
-        text_select=True,
-        js_api=api
+        text_select=True
     )
-    api.set_window(window)
 
     icon_path = get_icon_path()
     if icon_path:
@@ -244,6 +151,7 @@ def main():
 
     logger.info("Window closed. Terminating application...")
     server.should_exit = True
+
 
 
 if __name__ == "__main__":

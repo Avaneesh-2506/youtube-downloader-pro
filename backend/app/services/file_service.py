@@ -116,3 +116,71 @@ def open_file_native(path: Path | str) -> bool:
     except Exception as e:
         logger.error(f"Failed to open file natively: {e}")
         return False
+
+def choose_save_file_windows(initial_dir: str, default_filename: str, ext: str) -> Optional[str]:
+    """
+    Invokes the native Windows Save File Dialog (GetSaveFileNameW).
+    Returns the selected file path string or None if cancelled.
+    """
+    if sys.platform != "win32":
+        return None
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class OPENFILENAMEW(ctypes.Structure):
+            _fields_ = [
+                ("lStructSize", wintypes.DWORD),
+                ("hwndOwner", wintypes.HWND),
+                ("hInstance", wintypes.HINSTANCE),
+                ("lpstrFilter", wintypes.LPCWSTR),
+                ("lpstrCustomFilter", wintypes.LPWSTR),
+                ("nMaxCustFilter", wintypes.DWORD),
+                ("nFilterIndex", wintypes.DWORD),
+                ("lpstrFile", wintypes.LPWSTR),
+                ("nMaxFile", wintypes.DWORD),
+                ("lpstrFileTitle", wintypes.LPWSTR),
+                ("nMaxFileTitle", wintypes.DWORD),
+                ("lpstrInitialDir", wintypes.LPCWSTR),
+                ("lpstrTitle", wintypes.LPCWSTR),
+                ("Flags", wintypes.DWORD),
+                ("nFileOffset", wintypes.WORD),
+                ("nFileExtension", wintypes.WORD),
+                ("lpstrDefExt", wintypes.LPCWSTR),
+                ("lCustData", wintypes.LPARAM),
+                ("lpfnHook", wintypes.LPARAM),
+                ("lpTemplateName", wintypes.LPCWSTR),
+                ("pvReserved", wintypes.LPVOID),
+                ("dwReserved", wintypes.DWORD),
+                ("FlagsEx", wintypes.DWORD)
+            ]
+
+        OFN_OVERWRITEPROMPT = 0x00000002
+        OFN_PATHMUSTEXIST = 0x00000800
+        OFN_NOCHANGEDIR = 0x00000008
+        OFN_EXPLORER = 0x00080000
+
+        ext_clean = ext.lstrip(".").lower()
+        filter_str = f"{ext_clean.upper()} Files (*.{ext_clean})\0*.{ext_clean}\0All Files (*.*)\0*.*\0\0"
+
+        buf = ctypes.create_unicode_buffer(1024)
+        buf.value = default_filename
+
+        ofn = OPENFILENAMEW()
+        ofn.lStructSize = ctypes.sizeof(OPENFILENAMEW)
+        ofn.lpstrFilter = filter_str
+        ofn.lpstrFile = ctypes.cast(buf, wintypes.LPWSTR)
+        ofn.nMaxFile = 1024
+        ofn.lpstrInitialDir = initial_dir
+        ofn.lpstrTitle = "Save Video As"
+        ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER
+        ofn.lpstrDefExt = ext_clean
+
+        if ctypes.windll.comdlg32.GetSaveFileNameW(ctypes.byref(ofn)):
+            return buf.value
+        return None
+    except Exception as e:
+        logger.error(f"Error invoking Windows Save Dialog: {e}")
+        return None
+

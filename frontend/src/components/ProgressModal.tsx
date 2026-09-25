@@ -26,33 +26,32 @@ const cleanText = (str?: string): string => {
 
 export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose }) => {
   const [savedPath, setSavedPath] = useState<string | null>(null);
-  const [, setSavedFilename] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  if (!progress) return null;
-
-  const isCompleted = progress.stage === 'completed';
-  const isFailed = progress.stage === 'failed';
-
+  // Hook 1: Reset state when a new download task is initiated
   useEffect(() => {
-    // Reset state for new task
     setSavedPath(null);
-    setSavedFilename(null);
     setIsSaving(false);
     setSaveError(null);
   }, [progress?.task_id]);
 
+  // Hook 2: Trigger celebration confetti on completion
   useEffect(() => {
-    if (isCompleted) {
-      // Trigger festive celebration confetti
+    if (progress?.stage === 'completed') {
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 }
       });
     }
-  }, [isCompleted]);
+  }, [progress?.stage]);
+
+  // Early return is safe only after ALL React Hooks are called
+  if (!progress) return null;
+
+  const isCompleted = progress.stage === 'completed';
+  const isFailed = progress.stage === 'failed';
 
   const handleSaveToDownloads = async () => {
     if (!progress.task_id) return;
@@ -60,23 +59,6 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
     setSaveError(null);
 
     try {
-      // 1. Check if running inside desktop app with pywebview API
-      const pywebview = (window as any).pywebview;
-      if (pywebview?.api?.save_to_downloads) {
-        const res = await pywebview.api.save_to_downloads(progress.task_id);
-        if (res?.success) {
-          setSavedPath(res.path);
-          setSavedFilename(res.filename);
-          setIsSaving(false);
-          return;
-        } else if (res?.error) {
-          setSaveError(res.error);
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      // 2. Call backend API endpoint
       const resp = await fetch('/api/v1/download/save-to-downloads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,11 +66,10 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
       });
 
       const data = await resp.json();
-      if (data?.success) {
+      if (data?.success && data?.path) {
         setSavedPath(data.path);
-        setSavedFilename(data.filename);
       } else {
-        // Fallback for standalone browser: trigger standard browser download
+        // Fallback for standard web browser
         if (progress.file_url) {
           const link = document.createElement('a');
           link.href = progress.file_url;
@@ -97,15 +78,14 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
           link.click();
           document.body.removeChild(link);
         } else {
-          setSaveError(data?.detail || data?.error || 'Failed to save file.');
+          setSaveError(data?.detail || data?.error || 'Failed to save file to Downloads.');
         }
       }
     } catch (err: any) {
-      // Browser fallback on network error
       if (progress.file_url) {
         window.open(progress.file_url, '_blank');
       } else {
-        setSaveError(err.message || 'Error saving file.');
+        setSaveError(err.message || 'Error saving file to Downloads.');
       }
     } finally {
       setIsSaving(false);
@@ -118,28 +98,27 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
     setSaveError(null);
 
     try {
-      // 1. Check if running inside desktop app with pywebview API
-      const pywebview = (window as any).pywebview;
-      if (pywebview?.api?.save_file_as) {
-        const res = await pywebview.api.save_file_as(progress.task_id);
-        if (res?.success) {
-          setSavedPath(res.path);
-          setSavedFilename(res.filename);
-        } else if (res?.error) {
-          setSaveError(res.error);
-        }
-        // If cancelled, do nothing
-        return;
-      }
+      const resp = await fetch('/api/v1/download/save-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: progress.task_id }),
+      });
 
-      // 2. In browser fallback: trigger standard browser download
-      if (progress.file_url) {
-        const link = document.createElement('a');
-        link.href = progress.file_url;
-        link.download = progress.filename || 'video.mp4';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      const data = await resp.json();
+      if (data?.success && data?.path) {
+        setSavedPath(data.path);
+      } else if (data?.error !== 'cancelled') {
+        // Fallback for standard web browser
+        if (progress.file_url) {
+          const link = document.createElement('a');
+          link.href = progress.file_url;
+          link.download = progress.filename || 'video.mp4';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          setSaveError(data?.detail || data?.error || 'Failed to save file.');
+        }
       }
     } catch (err: any) {
       setSaveError(err.message || 'Error selecting save location.');
@@ -151,12 +130,6 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
   const handleOpenFolder = async () => {
     if (!savedPath) return;
     try {
-      const pywebview = (window as any).pywebview;
-      if (pywebview?.api?.open_folder) {
-        await pywebview.api.open_folder(savedPath);
-        return;
-      }
-
       await fetch('/api/v1/download/open-folder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,12 +143,6 @@ export const ProgressModal: React.FC<ProgressModalProps> = ({ progress, onClose 
   const handleOpenFile = async () => {
     if (!savedPath) return;
     try {
-      const pywebview = (window as any).pywebview;
-      if (pywebview?.api?.open_file) {
-        await pywebview.api.open_file(savedPath);
-        return;
-      }
-
       await fetch('/api/v1/download/open-file', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

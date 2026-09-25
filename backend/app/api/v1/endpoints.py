@@ -28,6 +28,7 @@ from app.services.file_service import (
     get_unique_filename,
     open_in_file_explorer,
     open_file_native,
+    choose_save_file_windows,
 )
 
 logger = logging.getLogger(__name__)
@@ -176,6 +177,51 @@ async def save_to_downloads(payload: SaveToDownloadsRequest):
             success=False,
             error=str(e)
         )
+
+@router.post("/download/save-as", response_model=SaveToDownloadsResponse)
+async def save_as(payload: SaveToDownloadsRequest):
+    task = download_manager.get_task(payload.task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Download task not found")
+
+    if not task.completed or not task.result_filepath or not task.result_filepath.exists():
+        if task.stage == "failed":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=task.error or "Download failed")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is still processing or unavailable")
+
+    try:
+        downloads_dir = str(get_user_downloads_dir())
+        default_name = task.filename or task.result_filepath.name
+        ext = task.result_filepath.suffix.lstrip(".").lower()
+
+        # Run GetSaveFileNameW in threadpool so it does not block the FastAPI loop
+        loop = asyncio.get_running_loop()
+        selected_path_str = await loop.run_in_executor(
+            None,
+            choose_save_file_windows,
+            downloads_dir,
+            default_name,
+            ext
+        )
+
+        if not selected_path_str:
+            # User cancelled dialog
+            return SaveToDownloadsResponse(success=False, error="cancelled")
+
+        dest_path = Path(selected_path_str)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(task.result_filepath, dest_path)
+        logger.info(f"File saved via Save As to: {dest_path}")
+
+        return SaveToDownloadsResponse(
+            success=True,
+            path=str(dest_path),
+            filename=dest_path.name
+        )
+    except Exception as e:
+        logger.error(f"Failed in save-as: {e}", exc_info=True)
+        return SaveToDownloadsResponse(success=False, error=str(e))
+
 
 @router.post("/download/open-folder", response_model=PathActionResponse)
 async def open_folder(payload: PathActionRequest):
